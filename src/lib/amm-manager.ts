@@ -170,6 +170,10 @@ export class AmmManager {
           if (result.result.engine_result === 'tesSUCCESS') {
             results[wallet.address] = { success: true, message: 'LP Trustline set successfully.' };
             successful++;
+          } else {
+            results[wallet.address] = { success: false, message: `LP Trustline failed: ${result.result.engine_result} - ${result.result.engine_result_message}` };
+            failed++;
+          }
         } catch (walletError) {
           results[wallet.address] = { success: false, message: `Failed to set LP Trustline: ${walletError.message}` };
           failed++;
@@ -182,7 +186,7 @@ export class AmmManager {
         total_wallets: walletsToProcess.length,
         successful: successful,
         failed: failed,
-      results: results,
+        results: results,
       };
     } catch (error: any) {
       console.error("Error setting LP Token trustline:", error);
@@ -192,27 +196,25 @@ export class AmmManager {
     }
   }
 
-  public async batchDepositToAmmPool(  password: string,
+  public async batchDepositToAmmPool(
+    password: string,
     amountLawas: number | null,
     amountXRP: number | null,
     walletAddresses: string[]
   ): Promise<any> {
     await this.connectClient();
     const results: { [address: string]: { success: boolean; message: string } } = {};
-    let successfulDeposits = 0;
-    let failedDeposits = 0;
+    let successful = 0;
+    let failed = 0;
 
     try {
       const allWallets = await this.walletManager.getDecryptedWallets(password);
       const walletsToProcess = allWallets.filter(wallet => walletAddresses.includes(wallet.address));
 
-      console.log("Decrypted wallets for batch deposit:", walletsToProcess.map(w => w.address));
-      console.log("Number of wallets retrieved for batch deposit:", walletsToProcess.length); // Added logging
-
       if (walletsToProcess.length === 0) {
         return {
-          success: true,
-          message: "Batch AMM deposit completed: 0 successful, 0 failed",
+          success: false,
+          message: "No wallets selected or failed to decrypt with provided password",
           total_wallets: 0,
           successful: 0,
           failed: 0,
@@ -220,113 +222,66 @@ export class AmmManager {
         };
       }
 
-      const lawasCurrency = {
-        currency: '4C41574153000000000000000000000000000000', // Hardcoded hex for LAWAS
-        issuer: 'rfAWYnEAkQGAhbESWAMdNccWJvdcrgugMC',
-      };
-      const xrpCurrency = { currency: 'XRP' };
-
       for (const wallet of walletsToProcess) {
         try {
-          // Check if account exists before attempting deposit
-          const accountExists = await this.walletManager.checkAccountExistence(wallet.address);
-          if (!accountExists) {
-            results[wallet.address] = { success: false, message: 'Account not found. Skipping this wallet.' };
-            failedDeposits++;
-            continue; // Skip to the next wallet
-          }
-
-          const amount1 = amountLawas ? String(amountLawas) : undefined;
-          const amount2 = amountXRP ? xrpToDrops(amountXRP) : undefined;
-
-          if (!amount1 && !amount2) {
-            results[wallet.address] = { success: false, message: "No deposit amount specified." };
-            failedDeposits++;
-            continue;
-          }
-
-          // Get current ledger sequence for LastLedgerSequence
-          const ledgerInfo = await this.client.request({ command: 'ledger', ledger_index: 'current' });
-          console.log(`Ledger Info for ${wallet.address}:`, ledgerInfo); // Added logging
-          const currentLedgerSequence = ledgerInfo.result.ledger.ledger_index; // Corrected access
-          console.log(`Current Ledger Sequence for ${wallet.address}:`, currentLedgerSequence); // Added logging
-          const lastLedgerSequence = currentLedgerSequence + 20; // Increased expiry window
-          console.log(`Calculated LastLedgerSequence for ${wallet.address}:`, lastLedgerSequence); // Added logging
-
           const ammDeposit: AMMDeposit = {
             TransactionType: 'AMMDeposit',
             Account: wallet.address,
-            Asset: lawasCurrency,
-            Asset2: xrpCurrency,
-            // LastLedgerSequence: lastLedgerSequence, // This line was causing the issue by being overwritten by autofill
+            Amount: amountLawas ? { currency: '4C41574153000000000000000000000000000000', issuer: 'rfAWYnEAkQGAhbESWAMdNccWJvdcrgugMC', value: String(amountLawas) } : undefined,
+            Amount2: amountXRP ? { currency: 'XRP', value: xrpToDrops(amountXRP) } : undefined,
           };
 
-          if (amount1) {
-            ammDeposit.Amount = { currency: lawasCurrency.currency, issuer: lawasCurrency.issuer, value: amount1 };
+          console.log(`Preparing AMMDeposit for ${wallet.address}:`, ammDeposit);
+
+          const prepared = await this.client.autofill(ammDeposit);
+          const signed = wallet.sign(prepared);
+
+          console.log(`Signed transaction for ${wallet.address}:`, signed.id);
+
+          let result;
+          try {
+            result = await Promise.race([
+              this.client.submitAndWait(signed.tx_blob),
+              new Promise((_, reject) => setTimeout(() => reject(new Error("Transaction submission timed out")), 60000)) // 60 seconds timeout
+            ]);
+          } catch (timeoutError: any) {
+            console.error(`Transaction submission for ${wallet.address} timed out:`, timeoutError.message);
+            results[wallet.address] = { success: false, message: `Transaction submission timed out: ${timeoutError.message}` };
+            failed++;
+            continue; // Move to the next wallet
           }
-          if (amount2) {
-            ammDeposit.Amount2 = { currency: 'XRP', value: xrpToDrops(amountXRP) };
-          }
 
-      const prepared = await this.client.autofill(ammDeposit);
-      prepared.LastLedgerSequence = lastLedgerSequence; // Set LastLedgerSequence AFTER autofill
-      prepared.Account = wallet.address; // Explicitly set Account after autofill
-      console.log(`Prepared transaction for ${wallet.address} (after explicit Account set):`, prepared);
-
-      const signed = wallet.sign(prepared);
-      console.log(`Signed transaction for ${wallet.address}:`, signed);
-
-      let result;
-      try {
-        console.log(`Attempting to submit transaction for ${wallet.address}...`);
-        result = await Promise.race([
-          this.client.submitAndWait(signed.tx_blob),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Transaction submission timed out")), 60000)) // 60 seconds timeout
-        ]);
-        console.log(`Transaction submission for ${wallet.address} completed. Result:`, result);
-      } catch (submitError: any) {
-        console.error(`Error submitting transaction for ${wallet.address}:`, submitError);
-        results[wallet.address] = { success: false, message: `Failed to submit transaction: ${submitError.message || JSON.stringify(submitError)}` };
-        failedDeposits++;
-        continue;
-      }
-
-      if (result && result.result) {
-        console.log(`Transaction result for ${wallet.address}:`, result.result);
-        if (result.result.engine_result === 'tesSUCCESS') {
-            results[wallet.address] = { success: true, message: 'Deposit successful.' };
-            successfulDeposits++;
+          if (result && result.result) {
+            console.log(`Transaction result for ${wallet.address}:`, result.result);
+            if (result.result.engine_result === 'tesSUCCESS') {
+              results[wallet.address] = { success: true, message: 'AMM Deposit successful.' };
+              successful++;
+            } else {
+              results[wallet.address] = { success: false, message: `AMM Deposit failed: ${result.result.engine_result} - ${result.result.engine_result_message}` };
+              failed++;
+            }
           } else {
-            results[wallet.address] = { success: false, message: `Deposit failed: ${result.result.engine_result_message}` };
-            failedDeposits++;
+            results[wallet.address] = { success: false, message: 'AMM Deposit failed: No result from transaction submission.' };
+            failed++;
           }
-        } catch (walletError) {
+        } catch (walletError: any) {
           results[wallet.address] = { success: false, message: `Failed to deposit: ${walletError.message}` };
-          failedDeposits++;
+          failed++;
         }
       }
 
       return {
         success: true,
-        message: `Batch AMM deposit completed: ${successfulDeposits} successful, ${failedDeposits} failed`,
+        message: `Batch AMM deposit completed: ${successful} successful, ${failed} failed`,
         total_wallets: walletsToProcess.length,
-        successful: successfulDeposits,
-        failed: failedDeposits,
-        results: {},
+        successful: successful,
+        failed: failed,
+        results: results,
       };
     } catch (error: any) {
-      console.error('Error in batch AMM deposit:', error);
-      return {
-        success: false,
-        message: `Batch AMM deposit failed: ${error.message}`,
-        total_wallets: 0,
-        successful: 0,
-        failed: 0,
-        results: {},
-      };
-    } finally {
-      // No disconnect here, as client is passed in and managed externally
+      console.error("Error in batch AMM deposit API:", error);
+      throw error;
     }
   }
-
+}
 
