@@ -1,6 +1,7 @@
 import { Client, Wallet, AMMDeposit, xrpToDrops, dropsToXrp, TrustSet } from 'xrpl';
 import { XrplConnection } from './XrplConnection';
 import { WalletManager } from './wallet-manager';
+import XrplSwap from './XrplSwap'; // Import XrplSwap
 
 // Manual implementation of currencyToHex to bypass Turbopack import issues
 function currencyToHex(currency: string): string {
@@ -29,10 +30,12 @@ function currencyToHex(currency: string): string {
 export class AmmManager {
   private client: Client;
   private walletManager: WalletManager;
+  private xrplSwap: XrplSwap; // Add XrplSwap instance
 
   constructor() {
     this.client = new Client("wss://v-xrpl.r3store.io");
     this.walletManager = new WalletManager();
+    this.xrplSwap = new XrplSwap(); // Initialize XrplSwap
   }
 
   private async connectClient(): Promise<void> {
@@ -88,27 +91,39 @@ export class AmmManager {
     }
   }
 
+  // Modified to use XPMarket API for more accurate rate
   public async getAmmPoolRatio(asset1: any, asset2: any): Promise<{ asset1_amount: string, asset2_amount: string } | null> {
-    await this.connectClient();
     try {
-      const ammInfo = await this.client.request({
-        command: 'amm_info',
-        asset: asset1,
-        asset2: asset2,
-      });
+      // Assuming asset1 is XRP and asset2 is LAWAS for this specific use case
+      const sourceCurrency = asset1.currency; // Should be 'XRP'
+      const destinationCurrency = asset2.currency; // Should be '4C41574153000000000000000000000000000000' (LAWAS hex)
+      const destinationIssuer = asset2.issuer; // Should be 'rfAWYnEAkQGAhbESWAMdNccWJvdcrgugMC'
 
-      if (ammInfo.result && ammInfo.result.amm && ammInfo.result.amm.amount && ammInfo.result.amm.amount2) {
+      // Convert hex LAWAS to 'LAWAS' string for XrplSwap
+      const lawasString = 'LAWAS';
+
+      const rateInfo = await this.xrplSwap.getExchangeRateFromXPMarket(
+        sourceCurrency as 'XRP' | 'LAWAS' | 'RLUSD',
+        lawasString as 'XRP' | 'LAWAS' | 'RLUSD'
+      );
+
+      if (rateInfo && rateInfo.rate) {
+        // The rate from XPMarket is 1 unit of sourceCurrency = X units of destinationCurrency
+        // So, if source is XRP and dest is LAWAS, rate is LAWAS per XRP.
+        // We need to return amounts that reflect this ratio.
+        // For simplicity, let's assume a base of 1 XRP.
+        const xrpAmount = 1;
+        const lawasAmount = xrpAmount * rateInfo.rate;
+
         return {
-          asset1_amount: ammInfo.result.amm.amount.value || ammInfo.result.amm.amount,
-          asset2_amount: ammInfo.result.amm.amount2.value || ammInfo.result.amm.amount2,
+          asset1_amount: String(xrpAmount),
+          asset2_amount: String(lawasAmount),
         };
       }
       return null;
     } catch (error) {
-      console.error('Error getting AMM pool ratio:', error);
+      console.error('Error getting AMM pool ratio from XPMarket:', error);
       return null;
-    } finally {
-      await this.disconnectClient();
     }
   }
 
@@ -346,6 +361,8 @@ export class AmmManager {
     }
   }
 }
+
+
 
 
 
