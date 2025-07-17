@@ -17,7 +17,7 @@ export class MasterWalletManager {
   private masterWallet: Wallet | null = null;
 
   constructor() {
-    this.client = new Client('wss://xrplcluster.com');
+    this.client = new Client("wss://v-xrpl.r3store.io");
   }
 
   private encryptPrivateKey(privateKey: string, password: string = 'default_master_key'): string {

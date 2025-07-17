@@ -20,7 +20,7 @@ export class TrustlineManager {
   private db = getDatabase();
 
   constructor() {
-    this.client = new Client('wss://xrplcluster.com');
+    this.client = new Client("wss://v-xrpl.r3store.io");
   }
 
   private currencyToHex(currency: string): string {

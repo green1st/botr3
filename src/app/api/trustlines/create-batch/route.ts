@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     }
 
     const walletManager = new WalletManager();
-    const client = new Client(process.env.XRPL_NODE || "wss://xrplcluster.com");
+    const client = new Client(process.env.XRPL_NODE || "wss://v-xrpl.r3store.io");
     await client.connect();
 
     const results: { [key: string]: any } = {};

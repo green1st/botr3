@@ -6,7 +6,7 @@ class XrplConnection {
   private client: Client;
 
   private constructor() {
-    this.client = new Client("wss://xrplcluster.com");
+    this.client = new Client("wss://v-xrpl.r3store.io");
   }
 
   public static getInstance(): XrplConnection {

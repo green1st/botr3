@@ -17,7 +17,7 @@ export class SwapManager {
   private xrplSwap: XrplSwap;
 
   constructor() {
-    this.client = new Client('wss://xrplcluster.com');
+    this.client = new Client("wss://v-xrpl.r3store.io");
     this.xrplSwap = new XrplSwap();
   }
 

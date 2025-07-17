@@ -24,7 +24,7 @@ export class WalletManager {
   private db = getDatabase();
 
   constructor() {
-    this.client = new Client('wss://xrplcluster.com');
+    this.client = new Client("wss://v-xrpl.r3store.io");
   }
 
   private encryptSecret(secret: string, password: string): string {
