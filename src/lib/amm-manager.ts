@@ -272,7 +272,7 @@ export class AmmManager {
             ammDeposit.Amount = { currency: lawasCurrency.currency, issuer: lawasCurrency.issuer, value: amount1 };
           }
           if (amount2) {
-            ammDeposit.Amount2 = xrpToDrops(amountXRP);
+            ammDeposit.Amount2 = { currency: 'XRP', value: xrpToDrops(amountXRP) };
           }
 
       const prepared = await this.client.autofill(ammDeposit);
@@ -285,11 +285,12 @@ export class AmmManager {
 
       let result;
       try {
+        console.log(`Attempting to submit transaction for ${wallet.address}...`);
         result = await Promise.race([
           this.client.submitAndWait(signed.tx_blob),
           new Promise((_, reject) => setTimeout(() => reject(new Error("Transaction submission timed out")), 60000)) // 60 seconds timeout
         ]);
-        console.log(`Transaction result for ${wallet.address}:`, result);
+        console.log(`Transaction submission for ${wallet.address} completed. Result:`, result);
       } catch (submitError: any) {
         console.error(`Error submitting transaction for ${wallet.address}:`, submitError);
         results[wallet.address] = { success: false, message: `Failed to submit transaction: ${submitError.message || JSON.stringify(submitError)}` };
