@@ -227,6 +227,8 @@ export class AmmManager {
           const ammDeposit: AMMDeposit = {
             TransactionType: 'AMMDeposit',
             Account: wallet.address,
+            Asset: { currency: '4C41574153000000000000000000000000000000', issuer: 'rfAWYnEAkQGAhbESWAMdNccWJvdcrgugMC' },
+            Asset2: { currency: 'XRP' },
             Amount: amountLawas ? { currency: '4C41574153000000000000000000000000000000', issuer: 'rfAWYnEAkQGAhbESWAMdNccWJvdcrgugMC', value: String(amountLawas) } : undefined,
             Amount2: amountXRP ? { currency: 'XRP', value: xrpToDrops(amountXRP) } : undefined,
           };
