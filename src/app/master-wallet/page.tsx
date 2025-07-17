@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Wallet, Plus, Send, ArrowUpDown, RefreshCw, Upload, Download } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -24,6 +25,7 @@ export default function MasterWalletPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [wallets, setWallets] = useState<any[]>([])
+  const [selectedWallets, setSelectedWallets] = useState<string[]>([])
   const [broadcastResults, setBroadcastResults] = useState<any>(null)
   const [collectResults, setCollectResults] = useState<any>(null)
 
@@ -49,13 +51,22 @@ export default function MasterWalletPage() {
 
   const fetchWallets = async () => {
     try {
-      const response = await fetch('/api/wallets')
+      const response = await fetch('/api/wallets-with-balances')
       if (response.ok) {
         const data = await response.json()
         setWallets(data.wallets || [])
+        setSelectedWallets(data.wallets.map((w: any) => w.address)) // Select all by default
       }
     } catch (error) {
       console.error('Error fetching wallets:', error)
+    }
+  }
+
+  const handleWalletSelection = (address: string, isChecked: boolean) => {
+    if (isChecked) {
+      setSelectedWallets(prev => [...prev, address])
+    } else {
+      setSelectedWallets(prev => prev.filter(walletAddress => walletAddress !== address))
     }
   }
 
@@ -148,21 +159,20 @@ export default function MasterWalletPage() {
       return
     }
 
-    if (wallets.length === 0) {
-      toast.error('No wallets found')
+    if (selectedWallets.length === 0) {
+      toast.error('Please select at least one wallet')
       return
     }
 
     setLoading(true)
     try {
-      const walletAddresses = wallets.map(w => w.address)
       const response = await fetch('/api/master-wallet/broadcast', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          wallet_addresses: walletAddresses,
+          wallet_addresses: selectedWallets,
           amount_per_wallet: parseFloat(amountPerWallet),
           memo: memoBroadcast
         })
@@ -189,21 +199,20 @@ export default function MasterWalletPage() {
       return
     }
 
-    if (wallets.length === 0) {
-      toast.error('No wallets found')
+    if (selectedWallets.length === 0) {
+      toast.error('Please select at least one wallet')
       return
     }
 
     setLoading(true)
     try {
-      const walletAddresses = wallets.map(w => w.address)
       const response = await fetch('/api/master-wallet/collect', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          wallet_addresses: walletAddresses,
+          wallet_addresses: selectedWallets,
           password: password,
           memo: memoCollect
         })
@@ -427,7 +436,7 @@ export default function MasterWalletPage() {
                     placeholder="Transaction memo"
                   />
                 </div>
-                <Button onClick={handleBroadcast} disabled={loading} className="w-full">
+                <Button onClick={handleBroadcast} disabled={loading || selectedWallets.length === 0} className="w-full">
                   {loading ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -436,7 +445,7 @@ export default function MasterWalletPage() {
                   ) : (
                     <>
                       <Send className="h-4 w-4 mr-2" />
-                      Broadcast to All Wallets
+                      Broadcast to Selected Wallets ({selectedWallets.length})
                     </>
                   )}
                 </Button>
@@ -499,7 +508,7 @@ export default function MasterWalletPage() {
                     placeholder="Transaction memo"
                   />
                 </div>
-                <Button onClick={handleCollect} disabled={loading} className="w-full">
+                <Button onClick={handleCollect} disabled={loading || selectedWallets.length === 0} className="w-full">
                   {loading ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -508,7 +517,7 @@ export default function MasterWalletPage() {
                   ) : (
                     <>
                       <Download className="h-4 w-4 mr-2" />
-                      Collect from All Wallets
+                      Collect from Selected Wallets ({selectedWallets.length})
                     </>
                   )}
                 </Button>
@@ -540,6 +549,61 @@ export default function MasterWalletPage() {
             </Card>
           </div>
         )}
+
+        {/* Wallet Selection */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>Select Wallets for Operations</CardTitle>
+            <CardDescription>Choose which wallets to include in broadcast and collect operations.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <Button onClick={() => setSelectedWallets(wallets.map(w => w.address))} variant="outline" size="sm" className="mr-2">Select All</Button>
+              <Button onClick={() => setSelectedWallets([])} variant="outline" size="sm">Deselect All</Button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Select
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Address
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      XRP Balance
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      LAWAS Balance
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {wallets.map((wallet) => (
+                    <tr key={wallet.address}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Checkbox
+                          checked={selectedWallets.includes(wallet.address)}
+                          onCheckedChange={(isChecked: boolean) => handleWalletSelection(wallet.address, isChecked)}
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {wallet.address}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {wallet.xrp_balance ? parseFloat(wallet.xrp_balance).toFixed(2) : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {wallet.lawas_balance ? parseFloat(wallet.lawas_balance).toFixed(2) : 'N/A'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
