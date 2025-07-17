@@ -88,6 +88,8 @@ export class AmmManager {
     } catch (error) {
       console.error('Error getting AMM LP Token info:', error);
       return null;
+    } finally {
+      // No disconnect here, as client is passed in and managed externally
     }
   }
 
@@ -206,6 +208,10 @@ export class AmmManager {
     await this.connectClient();
     console.log('depositToAmmPool called with wallet:', wallet.address); // Added logging
     try {
+      if (!wallet || !wallet.address) {
+        throw new Error('Wallet object is invalid or missing address.');
+      }
+
       const lawasCurrency = {
         currency: '4C41574153000000000000000000000000000000', // Hardcoded hex for LAWAS
         issuer: 'rfAWYnEAkQGAhbESWAMdNccWJvdcrgugMC',
@@ -362,6 +368,8 @@ export class AmmManager {
     }
   }
 }
+
+
 
 
 
