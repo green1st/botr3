@@ -1,0 +1,52 @@
+# Logs
+logs
+*.log
+pm-debug.log*
+
+# Dependency directories
+node_modules
+jspm_packages
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Production
+build
+
+# Miscellaneous
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Next.js specific
+.next/
+*.js.map
+*.css.map
+
+# Database
+*.db
+*.sqlite
+
+# Editor directories and files
+.vscode
+.idea
+*.swp
+*.swo
+
+# macOS specific
+.DS_Store
+
+# Windows specific
+thumbs.db
+Thumbs.db
+
+# r3store-wallet-manager-test specific
+r3store-wallet-manager-test.rar
+
+
