@@ -20,8 +20,10 @@ export async function POST(request: Request) {
 
     const wallet = walletManager.decryptWallet(walletData, password);
     if (!wallet) {
+      console.error(`Failed to decrypt wallet for address: ${walletAddress}`); // Added logging
       return NextResponse.json({ error: 'Failed to decrypt wallet' }, { status: 401 });
     }
+    console.log(`Decrypted wallet address in deposit API: ${wallet.address}`); // Added logging
 
     const result = await ammManager.depositToAmmPool(
       wallet,
@@ -35,5 +37,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message || 'Failed to deposit to AMM pool' }, { status: 500 });
   }
 }
+
 
 
