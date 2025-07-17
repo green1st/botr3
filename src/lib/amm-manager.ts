@@ -287,7 +287,7 @@ export class AmmManager {
       try {
         result = await Promise.race([
           this.client.submitAndWait(signed.tx_blob),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Transaction submission timed out')), 30000)) // 30 seconds timeout
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Transaction submission timed out")), 60000)) // 60 seconds timeout
         ]);
         console.log(`Transaction result for ${wallet.address}:`, result);
       } catch (submitError: any) {
