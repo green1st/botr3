@@ -328,7 +328,10 @@ export class AmmManager {
 
       let result;
       try {
-        result = await this.client.submitAndWait(signed.tx_blob);
+        result = await Promise.race([
+          this.client.submitAndWait(signed.tx_blob),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Transaction submission timed out')), 30000)) // 30 seconds timeout
+        ]);
         console.log(`Transaction result for ${wallet.address}:`, result);
       } catch (submitError: any) {
         console.error(`Error submitting transaction for ${wallet.address}:`, submitError);
@@ -337,7 +340,7 @@ export class AmmManager {
         continue;
       }
 
-          if (result.result.engine_result === 'tesSUCCESS') {
+      if (result && result.result && result.result.engine_result === 'tesSUCCESS') {
             results[wallet.address] = { success: true, message: 'Deposit successful.' };
             successfulDeposits++;
           } else {
