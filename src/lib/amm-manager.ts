@@ -204,6 +204,7 @@ export class AmmManager {
     amountXRP: number | null
   ): Promise<any> {
     await this.connectClient();
+    console.log('depositToAmmPool called with wallet:', wallet.address); // Added logging
     try {
       const lawasCurrency = {
         currency: '4C41574153000000000000000000000000000000', // Hardcoded hex for LAWAS
@@ -361,6 +362,8 @@ export class AmmManager {
     }
   }
 }
+
+
 
 
 
