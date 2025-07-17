@@ -192,10 +192,7 @@ export class AmmManager {
     }
   }
 
-
-
-  public async batchDepositToAmmPool(
-    password: string,
+  public async batchDepositToAmmPool(  password: string,
     amountLawas: number | null,
     amountXRP: number | null,
     walletAddresses: string[]
