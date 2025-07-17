@@ -170,11 +170,7 @@ export class AmmManager {
           if (result.result.engine_result === 'tesSUCCESS') {
             results[wallet.address] = { success: true, message: 'LP Trustline set successfully.' };
             successful++;
-          } else {
-            results[wallet.address] = { success: false, message: `Failed to set LP Trustline: ${result.result.engine_result_message}` };
-            failed++;
-          }
-        } catch (walletError: any) {
+        } catch (walletError) {
           results[wallet.address] = { success: false, message: `Failed to set LP Trustline: ${walletError.message}` };
           failed++;
         }
@@ -307,7 +303,7 @@ export class AmmManager {
             results[wallet.address] = { success: false, message: `Deposit failed: ${result.result.engine_result_message}` };
             failedDeposits++;
           }
-        } catch (walletError: any) {
+        } catch (walletError) {
           results[wallet.address] = { success: false, message: `Failed to deposit: ${walletError.message}` };
           failedDeposits++;
         }
