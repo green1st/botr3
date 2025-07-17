@@ -214,12 +214,12 @@ export class AmmManager {
       };
       const xrpCurrency = { currency: 'XRP' };
 
-      const ammDeposit: AMMDeposit = {
-        TransactionType: 'AMMDeposit',
-        Account: wallet.address,
-        Asset: lawasCurrency,
-        Asset2: xrpCurrency,
-      };
+          const ammDeposit: AMMDeposit = {
+            TransactionType: 'AMMDeposit',
+            Account: wallet.address as string, // Ensure Account is explicitly set as string
+            Asset: lawasCurrency,
+            Asset2: xrpCurrency,
+          };
 
       if (amountLawas) {
         ammDeposit.Amount = { currency: lawasCurrency.currency, issuer: lawasCurrency.issuer, value: String(amountLawas) };
