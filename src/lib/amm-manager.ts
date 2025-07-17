@@ -1,5 +1,5 @@
 import { Client, Wallet, AMMDeposit, xrpToDrops, dropsToXrp, TrustSet } from 'xrpl';
-import { XrplConnection } from './XrplConnection';
+import XrplConnection from './XrplConnection';
 import { WalletManager } from './wallet-manager';
 import XrplSwap from './XrplSwap'; // Import XrplSwap
 
