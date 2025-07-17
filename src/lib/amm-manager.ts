@@ -33,21 +33,17 @@ export class AmmManager {
   private xrplSwap: XrplSwap; // Add XrplSwap instance
 
   constructor() {
-    this.client = new Client("wss://v-xrpl.r3store.io");
+    this.client = XrplConnection.getInstance().getClient();
     this.walletManager = new WalletManager();
     this.xrplSwap = new XrplSwap(); // Initialize XrplSwap
   }
 
   private async connectClient(): Promise<void> {
-    if (!this.client.isConnected()) {
-      await this.client.connect();
-    }
+    await XrplConnection.getInstance().connect();
   }
 
   private async disconnectClient(): Promise<void> {
-    if (this.client.isConnected()) {
-      await this.client.disconnect();
-    }
+    // No need to disconnect here, XrplConnection manages its own lifecycle
   }
 
   public async getAmmInfo(asset1: any, asset2: any): Promise<any> {
@@ -322,15 +318,24 @@ export class AmmManager {
             ammDeposit.Amount2 = xrpToDrops(amountXRP);
           }
 
-          let prepared = await this.client.autofill(ammDeposit);
-          prepared.LastLedgerSequence = lastLedgerSequence; // Set LastLedgerSequence AFTER autofill
-          console.log(`Prepared transaction for ${wallet.address}:`, prepared);
+      const prepared = await this.client.autofill(ammDeposit);
+      prepared.LastLedgerSequence = lastLedgerSequence; // Set LastLedgerSequence AFTER autofill
+      prepared.Account = wallet.address; // Explicitly set Account after autofill
+      console.log(`Prepared transaction for ${wallet.address} (after explicit Account set):`, prepared);
 
-          const signed = wallet.sign(prepared);
-          console.log(`Signed transaction for ${wallet.address}:`, signed);
+      const signed = wallet.sign(prepared);
+      console.log(`Signed transaction for ${wallet.address}:`, signed);
 
-          const result = await this.client.submitAndWait(signed.tx_blob);
-          console.log(`Transaction result for ${wallet.address}:`, result);
+      let result;
+      try {
+        result = await this.client.submitAndWait(signed.tx_blob);
+        console.log(`Transaction result for ${wallet.address}:`, result);
+      } catch (submitError: any) {
+        console.error(`Error submitting transaction for ${wallet.address}:`, submitError);
+        results[wallet.address] = { success: false, message: `Failed to submit transaction: ${submitError.message || JSON.stringify(submitError)}` };
+        failedDeposits++;
+        continue;
+      }
 
           if (result.result.engine_result === 'tesSUCCESS') {
             results[wallet.address] = { success: true, message: 'Deposit successful.' };
