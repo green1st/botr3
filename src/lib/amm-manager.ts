@@ -60,7 +60,10 @@ export class AmmManager {
       return null;
     } finally {
       // await this.disconnectClient();
-    }client: Client, asset1: any, asset2: any): Promise<{ currency: string; issuer: string } | null> {
+    }
+  }
+
+  public async getAmmLpTokenInfo(client: Client, asset1: any, asset2: any): Promise<{ currency: string; issuer: string } | null> {
     try {
       if (!client.isConnected()) {
         await client.connect();
