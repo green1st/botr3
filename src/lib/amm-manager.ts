@@ -298,7 +298,9 @@ export class AmmManager {
         continue;
       }
 
-      if (result && result.result && result.result.engine_result === 'tesSUCCESS') {
+      if (result && result.result) {
+        console.log(`Transaction result for ${wallet.address}:`, result.result);
+        if (result.result.engine_result === 'tesSUCCESS') {
             results[wallet.address] = { success: true, message: 'Deposit successful.' };
             successfulDeposits++;
           } else {
