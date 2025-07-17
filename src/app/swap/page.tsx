@@ -175,6 +175,56 @@ export default function SwapPage() {
     }
   }
 
+  useEffect(() => {
+    const fetchAmmRatio = async () => {
+      if (depositOption === 'both' || depositOption === 'xrp') {
+        if (depositAmountXRP) {
+          try {
+            const response = await fetch('/api/amm/pool-ratio', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                asset1: {
+                  currency: 'XRP'
+                },
+                asset2: {
+                  currency: '4C41574153000000000000000000000000000000',
+                  issuer: 'rfAWYnEAkQGAhbESWAMdNccWJvdcrgugMC',
+                },
+              }),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              const xrpPoolAmount = parseFloat(data.asset1_amount);
+              const lawasPoolAmount = parseFloat(data.asset2_amount);
+              
+              if (xrpPoolAmount > 0 && lawasPoolAmount > 0) {
+                const ratio = lawasPoolAmount / xrpPoolAmount;
+                const calculatedLawas = parseFloat(depositAmountXRP) * ratio;
+                setDepositAmountLawas(calculatedLawas.toFixed(6)); // Format to 6 decimal places
+              } else {
+                setDepositAmountLawas('');
+              }
+            } else {
+              console.error('Failed to fetch AMM pool ratio:', await response.json());
+              setDepositAmountLawas('');
+            }
+          } catch (error) {
+            console.error('Error fetching AMM pool ratio:', error);
+            setDepositAmountLawas('');
+          }
+        } else {
+          setDepositAmountLawas('');
+        }
+      }
+    };
+
+    fetchAmmRatio();
+  }, [depositAmountXRP, depositOption]);
+
   const handleAmmDeposit = async () => {
     if (!depositWalletAddress || !depositPassword) {
       toast.error('Please select a wallet and enter password')
@@ -974,6 +1024,7 @@ export default function SwapPage() {
     </div>
   )
 }
+
 
 
 

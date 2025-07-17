@@ -1,8 +1,9 @@
-
 import { NextResponse } from 'next/server';
 import { AmmManager } from '../../../../lib/amm-manager';
+import { WalletManager } from '../../../../lib/wallet-manager';
 
 const ammManager = new AmmManager();
+const walletManager = new WalletManager();
 
 export async function POST(request: Request) {
   try {
@@ -12,11 +13,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    const walletData = await walletManager.getWalletByAddress(walletAddress);
+    if (!walletData) {
+      return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
+    }
+
+    const wallet = walletManager.decryptWallet(walletData, password);
+    if (!wallet) {
+      return NextResponse.json({ error: 'Failed to decrypt wallet' }, { status: 401 });
+    }
+
     const result = await ammManager.depositToAmmPool(
-      walletAddress,
+      wallet,
       amountLawas,
       amountXRP,
-      password
     );
 
     return NextResponse.json(result);

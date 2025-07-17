@@ -88,6 +88,30 @@ export class AmmManager {
     }
   }
 
+  public async getAmmPoolRatio(asset1: any, asset2: any): Promise<{ asset1_amount: string, asset2_amount: string } | null> {
+    await this.connectClient();
+    try {
+      const ammInfo = await this.client.request({
+        command: 'amm_info',
+        asset: asset1,
+        asset2: asset2,
+      });
+
+      if (ammInfo.result && ammInfo.result.amm && ammInfo.result.amm.amount && ammInfo.result.amm.amount2) {
+        return {
+          asset1_amount: ammInfo.result.amm.amount.value || ammInfo.result.amm.amount,
+          asset2_amount: ammInfo.result.amm.amount2.value || ammInfo.result.amm.amount2,
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting AMM pool ratio:', error);
+      return null;
+    } finally {
+      await this.disconnectClient();
+    }
+  }
+
   public async setLpTokenTrustline(
     password: string,
     walletAddresses: string[],
@@ -161,19 +185,30 @@ export class AmmManager {
 
   public async depositToAmmPool(
     wallet: Wallet,
-    asset1: any,
-    asset2: any,
-    amount1: string,
-    amount2: string
+    amountLawas: number | null,
+    amountXRP: number | null
   ): Promise<any> {
     await this.connectClient();
     try {
+      const lawasCurrency = {
+        currency: '4C41574153000000000000000000000000000000', // Hardcoded hex for LAWAS
+        issuer: 'rfAWYnEAkQGAhbESWAMdNccWJvdcrgugMC',
+      };
+      const xrpCurrency = { currency: 'XRP' };
+
       const ammDeposit: AMMDeposit = {
         TransactionType: 'AMMDeposit',
         Account: wallet.address,
-        Asset: asset1,
-        Asset2: asset2,
+        Asset: lawasCurrency,
+        Asset2: xrpCurrency,
       };
+
+      if (amountLawas) {
+        ammDeposit.Amount = { currency: lawasCurrency.currency, issuer: lawasCurrency.issuer, value: String(amountLawas) };
+      }
+      if (amountXRP) {
+        ammDeposit.Amount2 = xrpToDrops(amountXRP);
+      }
 
       const prepared = await this.client.autofill(ammDeposit);
       const signed = wallet.sign(prepared);
@@ -294,7 +329,7 @@ export class AmmManager {
         total_wallets: walletsToProcess.length,
         successful: successfulDeposits,
         failed: failedDeposits,
-        results: results,
+        results: {},
       };
     } catch (error: any) {
       console.error('Error in batch AMM deposit:', error);
@@ -311,5 +346,6 @@ export class AmmManager {
     }
   }
 }
+
 
 
