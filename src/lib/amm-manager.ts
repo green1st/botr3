@@ -59,11 +59,8 @@ export class AmmManager {
       console.error('Error getting AMM info:', error);
       return null;
     } finally {
-      await this.disconnectClient();
-    }
-  }
-
-  public async getAmmLpTokenInfo(client: Client, asset1: any, asset2: any): Promise<{ currency: string; issuer: string } | null> {
+      // await this.disconnectClient();
+    }client: Client, asset1: any, asset2: any): Promise<{ currency: string; issuer: string } | null> {
     try {
       if (!client.isConnected()) {
         await client.connect();
@@ -190,14 +187,9 @@ export class AmmManager {
       };
     } catch (error) {
       console.error('Error setting LP Token trustline:', error);
-      throw error;
-    } finally {
-      await this.disconnectClient();
-    }
-  }
-
-  public async depositToAmmPool(
-    wallet: Wallet,
+      throw erro    } finally {
+      // await this.disconnectClient(); // Removed to keep connection open for submitAndWait
+    }   wallet: Wallet,
     amountLawas: number | null,
     amountXRP: number | null
   ): Promise<any> {
@@ -237,11 +229,8 @@ export class AmmManager {
       console.error('Error depositing to AMM pool:', error);
       throw error;
     } finally {
-      await this.disconnectClient();
+      // await this.disconnectClient();
     }
-  }
-
-  public async batchDepositToAmmPool(
     password: string,
     amountLawas: number | null,
     amountXRP: number | null,
@@ -372,7 +361,7 @@ export class AmmManager {
         results: {},
       };
     } finally {
-      await this.disconnectClient();
+      // await this.disconnectClient(); // Removed to keep connection open for submitAndWait
     }
   }
 }
